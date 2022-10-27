@@ -17,6 +17,7 @@
     "@types/node": "^18.11.5",
     "@types/yargs": "^17.0.13",
     "colors": "^1.4.0",
+    "csv-parser": "^3.0.0",
     "yargs": "^17.6.0"
   }
 }
