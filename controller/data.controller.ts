@@ -1,51 +1,94 @@
+
+import { appConfig } from '../config/config';
 import { createInterface } from "readline";
-import fs from 'fs'
-import fileInfo from "../models/fileInfo";
-import transacctionState from "../models/transacctionState";
+import { userVote } from "../models/userVote";
+import argv from "../config/yargsConfig";
+import fs, { createReadStream, readFileSync } from 'fs'
+import csvParser from 'csv-parser';
 
-interface dataAccess {
-    readData: () => void
-    private transform: Function
+
+const source = ((argv as unknown) as { source: boolean, s: boolean }).source;
+const path = source
+    ? appConfig.productionRouteCsv
+    : appConfig.developmentRoute;
+let readLines: number = 0;
+let peopleCsv: userVote[] = [];
+let result: userVote[] = [];
+
+type Province = {
+    ID: string,
+    province: string,
+    city: string,
+    distri: string,
 }
 
-class dataController implements dataAccess {
-    public readData() {
-        createInterface({input: fs.createReadStream(fileInfo.path, {encoding: fileInfo.encoding})})
-            .on('line', (line) => {
-                if(fileInfo.lines === fileInfo.registerPerLecture){
-                    // startUp()
-                }
-                fileInfo.lines++;
-                
-                const userInfo = line.split(',');
-                if(userInfo.length >= 5)
-                    transacctionState.peopleCsv.push({
-                        ID: userInfo[0].trim(),
-                        code: userInfo[1].trim(),
-                        date: userInfo[3].trim(),
-                        managment: userInfo[4].trim(),
-                        name: userInfo[5].trim(),
-                        mName: userInfo[6].trim(),
-                        pName: userInfo[7].trim(),
-                    });
-                })
+const provinces: Province[] = [];
+
+export const makeProvinces = async () => {
+    return new Promise((resolve, _) => {
+        fs.createReadStream(appConfig.provincesCsv, { encoding: 'utf8' })
+            .pipe(csvParser(
+                {
+                    headers: ['ID', 'province', 'city', 'distri'],
+                    mapValues: ({ value }) => value.trim(),
+                }))
+            .on('data', province => {
+                provinces.push(province)
+            })
             .on('close', () => {
-                console.log(transacctionState.resultSet);
-            }); 
-    }
+                resolve(provinces);
+            })
+    })
+}
 
-    private transform(action: string)  {    
-        // switch (action) {
-        //     case value:
-        //         break;
-        //     default:
-        //         break;
-        // }
-    
-        // reset...
-        transacctionState.peopleCsv.length = 0;
-        fileInfo.lines = 0;
 
-    };
+
+
+type callbackAction = {
+    callback: (arr: userVote[], target: string) => Array<any>,
+    param: string
+}
+
+export const readData = (action: callbackAction) => {
+    return new Promise<Array<any>>((resolve, _) => {
+        createInterface({ input: fs.createReadStream(path, { encoding: appConfig.encoding }) })
+            .on('line', (line) => {
+
+                if (readLines === appConfig.linesPerBuffer) {
+                    transform(action);
+                    readLines = 0;
+                    peopleCsv.length = 0;
+                }
+                readLines++;
+                const userInfo = line.split(',');
+                add(userInfo);
+            })
+            .on('close', () => {
+                transform(action);
+                readLines = 0;
+                peopleCsv.length = 0;
+                resolve(result);
+            })
+    })
 
 }
+
+const transform = ({ callback, param }: callbackAction) => {
+    result
+        = [...callback(peopleCsv, param), ...result]
+            .filter(e => e.length !== 0 && e !== '0')
+};
+
+const add = (arr: string[]) => {
+    if (arr.length >= 5)
+        peopleCsv.push({
+            ID: arr[0].trim(),
+            code: arr[1].trim(),
+            date: arr[3].trim(),
+            managment: arr[4].trim(),
+            name: arr[5].trim(),
+            mName: arr[6].trim(),
+            pName: arr[7].trim(),
+        });
+}
+
