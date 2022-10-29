@@ -3,30 +3,76 @@ import { appConfig } from '../config/config';
 import { createInterface } from "readline";
 import { userVote } from "../models/userVote";
 import argv from "../config/yargsConfig";
-import fs, { createReadStream, readFileSync } from 'fs'
+import fs from 'fs'
 import csvParser from 'csv-parser';
+import { searchByID, searchByName, expiresDate, searchByDate, searchByLastName, searchByEqualNames, searchByProvince } from '../services/user.services';
 
 
-const source = ((argv as unknown) as { source: boolean, s: boolean }).source;
-const path = source
+
+type callbackAction = {
+    callback: any
+    param: string
+}
+
+const args = ((argv as unknown) as {
+    source: boolean,
+    s: boolean,
+    se: string,
+    search: string,
+    q: string,
+    query: string
+});
+
+export const search = args.search;
+export const query = args.query;
+let sum: boolean = false;
+let searchProvince: boolean = false;
+
+const setCallback = (search: string) => {
+    switch (search) {
+        case 'name':
+            return searchByName;
+        case 'id':
+            return searchByID;
+        case 'date':
+            return searchByDate;
+        case 'expires':
+            return expiresDate;
+        case 'equals':
+            sum = true;
+            return searchByEqualNames;
+        case 'lastname':
+            return searchByLastName
+        case 'province':
+            searchProvince = true;
+            return searchByProvince;
+        default:
+            return searchByName;
+    }
+}
+
+export const callback = setCallback(search);
+
+
+const path = args.s
     ? appConfig.productionRouteCsv
     : appConfig.developmentRoute;
 let readLines: number = 0;
 let peopleCsv: userVote[] = [];
-let result: userVote[] = [];
+let result: any[] = [];
 
-type Province = {
+export type Province = {
     ID: string,
     province: string,
     city: string,
     distri: string,
 }
 
-const provinces: Province[] = [];
+export const provinces: Province[] = [];
 
-export const makeProvinces = async () => {
+const makeProvinces = async () => {
     return new Promise((resolve, _) => {
-        fs.createReadStream(appConfig.provincesCsv, { encoding: 'utf8' })
+        const readStreamProvinces = fs.createReadStream(appConfig.provincesCsv, { encoding: 'utf8' })
             .pipe(csvParser(
                 {
                     headers: ['ID', 'province', 'city', 'distri'],
@@ -37,21 +83,20 @@ export const makeProvinces = async () => {
             })
             .on('close', () => {
                 resolve(provinces);
+                readStreamProvinces.removeAllListeners();
             })
     })
 }
 
+(async () => {
+    return await makeProvinces();
+})
 
 
-
-type callbackAction = {
-    callback: (arr: userVote[], target: string) => Array<any>,
-    param: string
-}
 
 export const readData = (action: callbackAction) => {
     return new Promise<Array<any>>((resolve, _) => {
-        createInterface({ input: fs.createReadStream(path, { encoding: appConfig.encoding }) })
+        const it = createInterface({ input: fs.createReadStream(path, { encoding: appConfig.encoding }) })
             .on('line', (line) => {
 
                 if (readLines === appConfig.linesPerBuffer) {
@@ -68,16 +113,28 @@ export const readData = (action: callbackAction) => {
                 readLines = 0;
                 peopleCsv.length = 0;
                 resolve(result);
+                it.close();
+                it.removeAllListeners();
             })
     })
 
 }
 
-const transform = ({ callback, param }: callbackAction) => {
-    result
-        = [...callback(peopleCsv, param), ...result]
-            .filter(e => e.length !== 0 && e !== '0')
+function transform({ callback, param }: callbackAction) {
+
+    if(searchProvince){
+        result = [...callback(peopleCsv, provinces, param), ...result]
+        return;
+    }
+
+    if (sum) {
+        result = [result[0] ? result[0] + callback(peopleCsv, param) : callback(peopleCsv, param)];
+        return;
+    }
+    result = [...callback(peopleCsv, param), ...result]
 };
+
+
 
 const add = (arr: string[]) => {
     if (arr.length >= 5)

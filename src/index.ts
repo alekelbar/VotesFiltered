@@ -1,40 +1,24 @@
-import { resolve } from 'path';
-import { createInterface } from 'readline';
-import { makeProvinces, readData } from '../controller/data.controller';
-import { searchByID, searchByName, expiresDate, searchByDate, searchByEqualNames, searchByLastName } from '../services/user.services';
+import { callback, query, readData } from '../controller/data.controller';
+import 'colors'
+import { createWriteStream } from 'fs';
 
+(async () => {
+    console.clear();
 
-const rl = createInterface({
-    input: process.stdin,
-    output: process.stdout
-});
+    console.log('Cargando información geografica...'.cyan)
 
-// console.clear();
-rl.question('hello! ', (awnser) => {
-    resolve(awnser);
-    rl.removeAllListeners();
-    rl.close();
-})
+    console.log('Construyendo su reporte...'.bgMagenta)
 
-let num: number = 0;
+    const data = await readData({ callback, param: query });
 
+    if (data.length > 30) {
+        console.log('Verificar la carpeta de reportes...'.cyan)
+        const fileWrite = createWriteStream('reports/report.json', { encoding: 'utf-8' });
+        fileWrite.write(JSON.stringify(data, null, 3))
+        fileWrite.close();
+    } else console.log(data);
 
-const repeat = async (option: number) => {
-
-    let opt: number = 0;
-
-    const data = (await readData({ callback: searchByName, param: 'alexander' }));
-
-    const handlerTime = setTimeout(() => {
-        console.log(data[num])
-        num++;
-    }, 1000);
-
-    if (option === 0) return;
-    else repeat(1);
-
-}
-
-// repeat(0);
+    console.log('reporte generado...'.bgGreen)
+})();
 
 
