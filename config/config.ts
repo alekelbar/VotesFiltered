@@ -10,7 +10,7 @@ interface appConfigInterface {
 }
 
 export const appConfig: appConfigInterface = {
-    linesPerBuffer: 100000,
+    linesPerBuffer: 1000000,
     encoding: 'utf8',
     productionRouteCsv: `${baseRoute}production.csv`,
     developmentRoute: `${baseRoute}test.csv`,
