@@ -5,7 +5,8 @@ import { Province } from "../controller/data.controller";
 import { userVote } from "../models/userVote"
 
 export const searchByID = (arr: userVote[], target: string): Array<any> => {
-    return arr.filter(e => e.ID === target.toUpperCase());
+    const data = arr.find(e => e.ID === target.toUpperCase());
+    return data ? [data] : [];
 }
 
 export const searchByName = (arr: userVote[], target: string): Array<any> => {
@@ -29,7 +30,7 @@ export const searchByEqualNames = (arr: userVote[], target: string): number => {
 export const searchByProvince = (arr: userVote[], arrp: Province[], target: string) => {
     const user = arr.find(e => e.ID === target);
     if (!user)
-    return [];
+        return [];
     return [arrp.find(e => e.ID === user.code)];
 }
 
@@ -37,7 +38,7 @@ export const searchByProvince = (arr: userVote[], arrp: Province[], target: stri
 export const expiresDate = (arr: userVote[], targetID: string): Array<any> => {
     const user = arr.find(e => e.ID === targetID);
     if (!user)
-        return [''];
+        return [];
     return (dayjs().add(1, 'M') >= dayjs(user.date)) ? ['Cercano a expirar'] : ['Lejano a expirar'];
 }
 
