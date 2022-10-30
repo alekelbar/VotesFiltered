@@ -118,7 +118,6 @@ export const readData = (action: callbackAction) => {
                 it.removeAllListeners();
             })
     })
-
 }
 
 function transform({ callback, param }: callbackAction) {
