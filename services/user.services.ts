@@ -22,15 +22,14 @@ export const searchByDate = (arr: userVote[], target: string): Array<any> => {
 
 export const searchByEqualNames = (arr: userVote[], target: string): number => {
     return arr.filter(e => {
-        return `${e.name} ${e.pName} ${e.mName}` === target.toUpperCase();
+        return `${e.name} ${e.mName} ${e.pName}` === target.toUpperCase();
     }).length;
 }
 
 export const searchByProvince = (arr: userVote[], arrp: Province[], target: string) => {
     const user = arr.find(e => e.ID === target);
     if (!user)
-    return [''];
-    console.log(arrp);
+    return [];
     return [arrp.find(e => e.ID === user.code)];
 }
 

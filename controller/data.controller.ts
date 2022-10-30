@@ -29,7 +29,7 @@ let sum: boolean = false;
 let searchProvince: boolean = false;
 
 const setCallback = (search: string) => {
-    switch (search) {
+    switch (search.toLocaleLowerCase()) {
         case 'name':
             return searchByName;
         case 'id':
@@ -54,7 +54,7 @@ const setCallback = (search: string) => {
 export const callback = setCallback(search);
 
 
-const path = args.s
+const path = !args.s
     ? appConfig.productionRouteCsv
     : appConfig.developmentRoute;
 let readLines: number = 0;
@@ -68,9 +68,8 @@ export type Province = {
     distri: string,
 }
 
-export const provinces: Province[] = [];
 
-const makeProvinces = async () => {
+const makeProvinces = async (provinces: Province[]) => {
     return new Promise((resolve, _) => {
         const readStreamProvinces = fs.createReadStream(appConfig.provincesCsv, { encoding: 'utf8' })
             .pipe(csvParser(
@@ -88,9 +87,11 @@ const makeProvinces = async () => {
     })
 }
 
+const provinces: Province[] = [];
+
 (async () => {
-    return await makeProvinces();
-})
+    await makeProvinces(provinces);
+})();
 
 
 
